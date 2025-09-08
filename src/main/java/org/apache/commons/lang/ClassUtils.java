@@ -770,7 +770,7 @@ public class ClassUtils {
     /**
      * Maps names of primitives to their corresponding primitive {@link Class}es.
      */
-    private static final Map<String, Class<?>> namePrimitiveMap = new HashMap<>();
+    private static final Map namePrimitiveMap = new HashMap();
     static {
         namePrimitiveMap.put(Boolean.TYPE.getSimpleName(), Boolean.TYPE);
         namePrimitiveMap.put(Byte.TYPE.getSimpleName(), Byte.TYPE);
@@ -789,8 +789,8 @@ public class ClassUtils {
      * @param className the primitive class for the given class name.
      * @return the primitive class.
      */
-    static Class<?> getPrimitiveClass(final String className) {
-        return namePrimitiveMap.get(className);
+    static Class getPrimitiveClass(final String className) {
+        return (Class) namePrimitiveMap.get(className);
     }
 
     /**
