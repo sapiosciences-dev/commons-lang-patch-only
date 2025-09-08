@@ -748,30 +748,49 @@ public class ClassUtils {
      */
     public static Class getClass(
             ClassLoader classLoader, String className, boolean initialize) throws ClassNotFoundException {
-        try {
-            Class clazz;
-            if (abbreviationMap.containsKey(className)) {
-                String clsName = "[" + abbreviationMap.get(className);
-                clazz = Class.forName(clsName, initialize, classLoader).getComponentType();
-            } else {
-                clazz = Class.forName(toCanonicalName(className), initialize, classLoader);
-            }
-            return clazz;
-        } catch (ClassNotFoundException ex) {
-            // allow path separators (.) as inner class name separators
-            int lastDotIndex = className.lastIndexOf(PACKAGE_SEPARATOR_CHAR);
-
-            if (lastDotIndex != -1) {
-                try {
-                    return getClass(classLoader, className.substring(0, lastDotIndex) +
-                            INNER_CLASS_SEPARATOR_CHAR + className.substring(lastDotIndex + 1),
-                            initialize);
-                } catch (ClassNotFoundException ex2) {
+        // YQ: CVE-2025-48924 Rewrite the class to be exactly the same as commons 3's getClass using new Java API methods.
+        // This method was re-written to avoid recursion and stack overflows found by fuzz testing.
+        String next = className;
+        int lastDotIndex = -1;
+        do {
+            try {
+                final Class clazz = getPrimitiveClass(next);
+                return clazz != null ? clazz : Class.forName(toCanonicalName(next), initialize, classLoader);
+            } catch (final ClassNotFoundException ex) {
+                lastDotIndex = next.lastIndexOf(PACKAGE_SEPARATOR_CHAR);
+                if (lastDotIndex != -1) {
+                    next = next.substring(0, lastDotIndex) + INNER_CLASS_SEPARATOR_CHAR + next.substring(lastDotIndex + 1);
                 }
             }
+        } while (lastDotIndex != -1);
+        throw new ClassNotFoundException(next);
+    }
 
-            throw ex;
-        }
+    // YQ: CVE-2025-48924 Added namePrimitiveMap
+    /**
+     * Maps names of primitives to their corresponding primitive {@link Class}es.
+     */
+    private static final Map<String, Class<?>> namePrimitiveMap = new HashMap<>();
+    static {
+        namePrimitiveMap.put(Boolean.TYPE.getSimpleName(), Boolean.TYPE);
+        namePrimitiveMap.put(Byte.TYPE.getSimpleName(), Byte.TYPE);
+        namePrimitiveMap.put(Character.TYPE.getSimpleName(), Character.TYPE);
+        namePrimitiveMap.put(Double.TYPE.getSimpleName(), Double.TYPE);
+        namePrimitiveMap.put(Float.TYPE.getSimpleName(), Float.TYPE);
+        namePrimitiveMap.put(Integer.TYPE.getSimpleName(), Integer.TYPE);
+        namePrimitiveMap.put(Long.TYPE.getSimpleName(), Long.TYPE);
+        namePrimitiveMap.put(Short.TYPE.getSimpleName(), Short.TYPE);
+        namePrimitiveMap.put(Void.TYPE.getSimpleName(), Void.TYPE);
+    }
+
+    /**
+     * Gets the primitive class for the given class name, for example "byte".
+     *
+     * @param className the primitive class for the given class name.
+     * @return the primitive class.
+     */
+    static Class<?> getPrimitiveClass(final String className) {
+        return namePrimitiveMap.get(className);
     }
 
     /**
@@ -886,11 +905,13 @@ public class ClassUtils {
      */
     private static String toCanonicalName(String className) {
         className = StringUtils.deleteWhitespace(className);
+        //YQ: CVE-2025-48924 Use arrayMarker. https://github.com/apache/commons-lang/commit/b424803abdb2bec818e4fbcb251ce031c22aca53
+        final String arrayMarker = "[]";
         if (className == null) {
             throw new NullArgumentException("className");
-        } else if (className.endsWith("[]")) {
+        } else if (className.endsWith(arrayMarker)) {
             StrBuilder classNameBuffer = new StrBuilder();
-            while (className.endsWith("[]")) {
+            while (className.endsWith(arrayMarker)) {
                 className = className.substring(0, className.length() - 2);
                 classNameBuffer.append("[");
             }
