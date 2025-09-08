@@ -9,7 +9,7 @@ As such, it is still important to keep it secure and up-to-date.
 
 This project is a fork of `commons-lang` and is maintained by [Sapio Sciences LLC](https://www.sapiosciences.com/) to respond to latest CVE patches.
 Sapio publishes the library under its own artifactory repository under the same group ID and artifact ID, appended with an additional patch number.
-For example: `org.apache.commons:commons-lang:2.6-Sapio-CVE-2025-48924` will patch CVE-2025-48924 and all earlier dated CVEs.
+For example: `org.apache.commons:commons-lang:2.6-SapioCVE202548924` will patch CVE-2025-48924 and all earlier dated CVEs.
 
 After publication, the artifact is considered locked down and will not be allowed to be overwritten in the repository server. New patches will use a new version number.
 If a republication is required, then the version number will be appended with an additional "bx" where x is an incrementing number starting at 2 for the first patch.
